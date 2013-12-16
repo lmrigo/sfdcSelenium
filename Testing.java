@@ -14,75 +14,104 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.ie.InternetExplorerDriver;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
 
 public class Testing {
-	private static String dellRep =  "pedro_haeser_dell_rep@dell.com.dfs.dit";
-	private static String pwd = "d1n4m173,";
-	private static Double TYPE = 1.0;
+	private static String dellRepIreland =  "pedro_haeser_dell_rep@dell.com.dfs.dit";
+	private static String dellRepFrance =  "pedro_haeser_dell_rep_france@dell.com.dfs.dit";
+	private static String password = "d1n4m173,";
+	private static String WEBDRIVERPATH = "C:\\workspaces\\IEDriverServer.exe";
 	
 	private WebDriver driver;
 	private String baseUrl;
-	private String username;
-	private String password;
 	
 	private ArrayList<Integer> terms = new ArrayList<Integer>();
 	private ArrayList<Integer> frequencies = new ArrayList<Integer>();
 	private Map<Integer,String> frequencies2String = new HashMap<Integer,String>();
-	private Map<Integer,Double> costOfFunds = new HashMap<Integer,Double>();
-	private Map<Integer,Double> term2BlendedRV = new HashMap<Integer,Double>();
-	private Map<Integer,Double> term2LeaseRV = new HashMap<Integer,Double>();
-	private Map<String,Map<Integer,Double>> leaseType2TermRV = new HashMap<String,Map<Integer,Double>>();
 	
-	@Before
-	public void setUp() throws Exception {
-		System.setProperty("webdriver.ie.driver", "C:\\Users\\Pedro_Haeser\\Desktop\\LeaseCalculatorSelenium\\IEDriverServer.exe");
-		driver = new InternetExplorerDriver();
-		baseUrl = "https://dit-dfs.cs30.force.com";
-		username = dellRep;
-		password = pwd;
-		driver.manage().timeouts().implicitlyWait(1, TimeUnit.SECONDS);
-		
+	public Testing(){
 		populateTerms();
 		populateFrequencies();
 		populateFrequencies2String();
-		populateLeaseType2TermRV();
-		populateTerm2BlendedRV();
-		populateTerm2LeaseRV();
-		populateCostOfFunds();
+		System.setProperty("webdriver.ie.driver", WEBDRIVERPATH);
+	}
+	
+	@Before
+	public void setUp() throws Exception {
+		driver = new InternetExplorerDriver();
+		baseUrl = "https://dit-dfs.cs30.force.com";
+		driver.manage().timeouts().implicitlyWait(2, TimeUnit.SECONDS);
+	}
 		
-	}
-	
-	private void openExternalPortal() throws Exception {
-		driver.get(baseUrl + "/fcportal/login");
-		driver.findElement(By.id("username")).sendKeys(username);
-		driver.findElement(By.id("password")).sendKeys(password);
-		driver.findElement(By.id("Login")).click();
-	}
-	
 	@Test
-	public void leaseCalculatorSuite() throws Exception{
-		openExternalPortal();
+	public void leaseCalculatorIreland() throws Exception{
+		openExternalPortal(Testing.dellRepIreland,Testing.password);
 		String leaseType = "Residual Based Lease";
 		Double equipmentCost = 500.0;
+		Double commission = 0.00;
 		Integer numOfAssets = 1;
 		Double categoryAmount = 500.0;
 		String assetCategory = "Dell Client Equipment";
 
 		for(Integer t:terms)
 			for(Integer f:frequencies)
-				tryLeaseCalculator(leaseType, equipmentCost, t, f, assetCategory, numOfAssets, categoryAmount);
+				tryLeaseCalculator(leaseType, equipmentCost, commission, t, f, assetCategory, numOfAssets, categoryAmount);
+	}
+
+	@Test
+	public void leaseCalculatorIrelandFinanceLeaseResidual() throws Exception{
+		openExternalPortal(Testing.dellRepIreland,Testing.password);
+		String leaseType = "Finance Lease Residual";
+		Double equipmentCost = 500.0;
+		Double commission = 0.00;
+		Integer numOfAssets = 1;
+		Double categoryAmount = 500.0;
+		String assetCategory = "Dell Client Equipment";
+
+		for(Integer t:terms)
+			for(Integer f:frequencies)
+				tryLeaseCalculator(leaseType, equipmentCost, commission, t, f, assetCategory, numOfAssets, categoryAmount);
+	}
+
+	@Test
+	public void leaseCalculatorFrance() throws Exception{
+		openExternalPortal(Testing.dellRepFrance,Testing.password);
+		String leaseType = "Crédit-Bail";
+		Double equipmentCost = 500.0;
+		Double commission = 0.01;
+		Integer numOfAssets = 1;
+		Double categoryAmount = 500.0;
+		String assetCategory = "IT Related Hardware";
+
+		for(Integer t:terms)
+			for(Integer f:frequencies)
+				tryLeaseCalculator(leaseType, equipmentCost, commission, t, f, assetCategory, numOfAssets, categoryAmount);
 	}
 	
-	
-	public void tryLeaseCalculator(String leaseType, Double equipmentCost, Integer term, Integer frequency, String assetCategory, Integer numOfAssets, Double categoryAmount) throws Exception {
+	private void openExternalPortal(String username, String password) throws Exception {
+		driver.get(baseUrl + "/fcportal/login");
+		driver.findElement(By.id("username")).sendKeys(username);
+		driver.findElement(By.id("password")).sendKeys(password);
+		driver.findElement(By.id("Login")).click();
+	}
 
+    private void logoutExternalPortal() throws Exception {
+        driver.findElement(By.className("block_username")).findElement(By.tagName("a")).click();
+    }
+
+	public void tryLeaseCalculator(String leaseType, Double equipmentCost, Double commission, Integer term, Integer frequency, String assetCategory, Integer numOfAssets, Double categoryAmount) throws Exception {
+
+		LeaseCalculator lc = new LeaseCalculator();
 		tryLeaseCalculator(leaseType, String.valueOf(equipmentCost), String.valueOf(term), this.frequencies2String.get(frequency), assetCategory, String.valueOf(numOfAssets), String.valueOf(categoryAmount),
-				leaseCalculate(leaseType, equipmentCost, term, frequency, assetCategory, numOfAssets, categoryAmount));
+				lc.leaseCalculate(leaseType, equipmentCost, commission, term, frequency, assetCategory, numOfAssets, categoryAmount));
 	}
 
-	public void tryLeaseCalculator(String leaseType, String equipmentCost, String term, String frequency, String assetCategory, String numOfAssets, String categoryAmount, String expectedRentalValue) throws Exception {
+	public void tryLeaseCalculator(String leaseType, String equipmentCost, String term, String frequency, String assetCategory, String numOfAssets, String categoryAmount, Double expectedRentalValue) throws Exception {
 		//Lease Calculator
 		driver.findElement(By.className("icon_lease")).click();
+		Thread.sleep(1000);
 		// Equipment Cost
 		driver.findElement(By.name("calculation-input-value")).sendKeys(equipmentCost);
 		// Lease Type
@@ -102,64 +131,32 @@ public class Testing {
 		// Category Amount
 		driver.findElements(By.name("Total_Price__c")).get(2).sendKeys(categoryAmount);
 		//Wait until it calculates
-		Thread.sleep(3500);
+		WebDriverWait wait = new WebDriverWait(driver,10);
+		wait.until(new ExpectedCondition<Boolean>() {
+			public Boolean apply(WebDriver driver) {
+			    WebElement elementWhole = driver.findElements(By.className("currency-whole")).get(2);
+			    WebElement elementFraction = driver.findElements(By.className("currency-fraction")).get(2);
+			    String whole = elementWhole.getText();
+			    String fraction = elementFraction.getText();
+			    if(whole.equals("0") && fraction.equals("00"))
+			    	return false;
+			    else
+			    	return true;
+		    }
+			});
 		
+//		String symbol = driver.findElements(By.className("currency-symbol-left")).get(2).getText();
 		String whole = driver.findElements(By.className("currency-whole")).get(2).getText();
 		String fraction = driver.findElements(By.className("currency-fraction")).get(2).getText();
-		String rentalValue = whole+"."+fraction;
-		
-		double rentalValueD = Double.parseDouble(rentalValue);
-		double expectedRentalValueD = Double.parseDouble(expectedRentalValue);
+		Double rentalValue = Double.parseDouble(whole+"."+fraction);
 		
 		System.out.println("Testing: " + "Term = " + term + " Frequency = " + frequency);
 		
-		Assert.assertEquals(expectedRentalValueD, rentalValueD, 0.01);		
+		Assert.assertEquals(expectedRentalValue, rentalValue, 0.01);
 	}
 	
-	public String leaseCalculate(String leaseType, Double equipmentCost, Integer term, Integer frequency, String assetCategory, Integer numOfAssets, Double categoryAmount){
+	
 		
-		double rental = 0.0;
-		double presentValue = categoryAmount;
-		double nper =  term/(12/frequency);
-		double marginRate = getMarginRate(leaseType, term);
-//		System.out.println("Margin Rate: "+marginRate);
-		double costOfFunds = getCostOfFunds(term);
-//		System.out.println("Cost of Funds: "+costOfFunds);
-		double rate = (marginRate/frequency) + costOfFunds;
-		double residualValue = getResidualValue(leaseType, assetCategory, term);
-//		System.out.println("RV: "+residualValue);
-		double futureValue = presentValue*residualValue;
-		double type = TYPE;
-
-		rental = ((presentValue*(Math.pow((1.0+rate),nper)))-futureValue) / ((1.0+(type*rate))*((Math.pow((1.0+rate),nper))-1.0)/rate);
-//		System.out.println("Rental: "+rental);
-		return String.valueOf(rental);
-	}
-	
-	private Double getResidualValue(String leaseType, String assetCategory, Integer term) {
-		// TODO Add parameters business segments, eboss branch, currency ...
-		return this.leaseType2TermRV.get(leaseType).get(term);
-	}
-
-	
-	private Double getCostOfFunds(Integer term) {
-		// TODO Add parameter currency
-		return this.costOfFunds.get(term);
-	}
-	
-	private Double getMarginRate(String leaseType, int term) {
-		// TODO Add parameters business segments, eboss branch, currency ...
-		Double margin = 0.0;
-		switch(term){
-			case 48 : margin = 0.050; break;
-			case 36 : margin = 0.050; break;
-			case 24 : margin = 0.070; break;
-			case 12 : margin = 0.070; break;
-			default : margin = null; 
-		}
-		return margin;
-	}
-
 	private void populateTerms(){
 		this.terms.add(12);
 		this.terms.add(24);
@@ -180,35 +177,10 @@ public class Testing {
 		this.frequencies2String.put(new Integer(4),"Quarterly");
 		this.frequencies2String.put(new Integer(12),"Monthly");
 	}
-	
-	private void populateLeaseType2TermRV() {
-		this.leaseType2TermRV.put("Residual Based Value", term2BlendedRV);
-		this.leaseType2TermRV.put("Finance Lease Residual", term2LeaseRV);
-	}
-
-	private void populateTerm2BlendedRV() {
-		this.term2BlendedRV.put(new Integer(48), new Double(0.0105));
-		this.term2BlendedRV.put(new Integer(36), new Double(0.0105));
-		this.term2BlendedRV.put(new Integer(24), new Double(0.0125));
-		this.term2BlendedRV.put(new Integer(12), new Double(0.0125));
-	}
-
-	private void populateTerm2LeaseRV() {
-		this.term2LeaseRV.put(new Integer(48), new Double(0.0160));
-		this.term2LeaseRV.put(new Integer(36), new Double(0.0160));
-		this.term2LeaseRV.put(new Integer(24), new Double(0.0120));
-		this.term2LeaseRV.put(new Integer(12), new Double(0.0120));
-	}
-	
-	private void populateCostOfFunds() {
-		this.costOfFunds.put(new Integer(48), new Double(0.0100));
-		this.costOfFunds.put(new Integer(36), new Double(0.0309));
-		this.costOfFunds.put(new Integer(24), new Double(0.0100));
-		this.costOfFunds.put(new Integer(12), new Double(0.0100));
-	}
-	
+		
 	@After
 	public void tearDown() throws Exception {
+		logoutExternalPortal();
 		Thread.sleep(2000);
 		driver.quit();
 	}
