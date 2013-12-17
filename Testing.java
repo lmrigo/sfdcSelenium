@@ -11,10 +11,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.ie.InternetExplorerDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.FluentWait;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 
@@ -42,7 +45,7 @@ public class Testing {
 	public void setUp() throws Exception {
 		driver = new InternetExplorerDriver();
 		baseUrl = "https://dit-dfs.cs30.force.com";
-		driver.manage().timeouts().implicitlyWait(2, TimeUnit.SECONDS);
+		driver.manage().timeouts().implicitlyWait(30, TimeUnit.SECONDS);
 	}
 		
 	@Test
@@ -111,7 +114,6 @@ public class Testing {
 	public void tryLeaseCalculator(String leaseType, String equipmentCost, String term, String frequency, String assetCategory, String numOfAssets, String categoryAmount, Double expectedRentalValue) throws Exception {
 		//Lease Calculator
 		driver.findElement(By.className("icon_lease")).click();
-		Thread.sleep(1000);
 		// Equipment Cost
 		driver.findElement(By.name("calculation-input-value")).sendKeys(equipmentCost);
 		// Lease Type
@@ -130,20 +132,21 @@ public class Testing {
 		driver.findElements(By.name("Quantity")).get(2).sendKeys(numOfAssets);
 		// Category Amount
 		driver.findElements(By.name("Total_Price__c")).get(2).sendKeys(categoryAmount);
-		//Wait until it calculates
-		WebDriverWait wait = new WebDriverWait(driver,10);
+		// Wait until it calculates
+		// Rental Value is present
+		new WebDriverWait(driver,100).until(ExpectedConditions.presenceOfElementLocated(By.xpath("//SPAN[@id='calculation-output-value-id']/SPAN[2]")));
+		// Renta Value is different from 0.00
+		FluentWait<WebDriver> wait = new WebDriverWait(driver,30).ignoring(StaleElementReferenceException.class);
 		wait.until(new ExpectedCondition<Boolean>() {
 			public Boolean apply(WebDriver driver) {
-			    WebElement elementWhole = driver.findElements(By.className("currency-whole")).get(2);
-			    WebElement elementFraction = driver.findElements(By.className("currency-fraction")).get(2);
-			    String whole = elementWhole.getText();
-			    String fraction = elementFraction.getText();
+			    String whole = driver.findElements(By.className("currency-whole")).get(2).getText();
+			    String fraction = driver.findElements(By.className("currency-fraction")).get(2).getText();
 			    if(whole.equals("0") && fraction.equals("00"))
 			    	return false;
 			    else
 			    	return true;
 		    }
-			});
+		});
 		
 //		String symbol = driver.findElements(By.className("currency-symbol-left")).get(2).getText();
 		String whole = driver.findElements(By.className("currency-whole")).get(2).getText();
