@@ -81,7 +81,7 @@ public class LeaseCalculator {
 		populateTerm2BlendedRV();
 		populateTerm2LeaseRV();
 		populateTerm2PurchaseRV();
-		this.leaseType2TermRV.put("Residual Based Value", term2BlendedRV);
+		this.leaseType2TermRV.put("Residual Based Lease", term2BlendedRV);
 		this.leaseType2TermRV.put("Finance Lease Residual", term2LeaseRV);
         this.leaseType2TermRV.put("Crédit-Bail", term2PurchaseRV);
 	}
